@@ -1,0 +1,11 @@
+fastapi>=0.115.0
+uvicorn>=0.32.0
+jinja2>=3.1.4
+python-dotenv>=1.0.1
+google-generativeai>=0.8.3
+httpx>=0.28.0
+websockets>=14.0
+solana>=0.36.12
+solders>=0.27.1
+base58>=2.1.1
+twifork>=2.3.3

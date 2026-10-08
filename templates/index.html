@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Meme Bot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: #0a0e1a; color: #e6edf3; min-height: 100vh; padding: 20px; }
+  .header { display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(135deg, #131a2e, #1a2340);
+            padding: 18px 24px; border-radius: 12px; margin-bottom: 20px;
+            border: 1px solid #1f2a44; }
+  .logo { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .logo span { color: #4ade80; }
+  .version { font-size: 10px; background: #4ade80; color: #052e16;
+             padding: 2px 6px; border-radius: 4px; font-weight: 800; }
+  .stats { display: flex; gap: 25px; }
+  .stat { text-align: right; }
+  .stat-label { font-size: 10px; color: #8892a6; text-transform: uppercase; letter-spacing: 1px; }
+  .stat-value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .green { color: #4ade80; } .red { color: #f87171; } .yellow { color: #fbbf24; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .col { display: flex; flex-direction: column; gap: 16px; }
+  .card { background: #131a2e; border: 1px solid #1f2a44; border-radius: 12px;
+          padding: 16px; overflow: hidden; }
+  .card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px;
+             color: #8892a6; margin-bottom: 12px; display: flex; justify-content: space-between; }
+  .card h3 span { font-size: 11px; color: #4ade80; }
+  .scroll { max-height: 380px; overflow-y: auto; }
+  .scroll::-webkit-scrollbar { width: 6px; }
+  .scroll::-webkit-scrollbar-thumb { background: #2a3654; border-radius: 3px; }
+  .log-line { font-family: "Consolas", monospace; font-size: 11px;
+              padding: 5px 8px; border-radius: 6px; margin-bottom: 3px;
+              border-left: 3px solid #2a3654; }
+  .log-BUY { border-color: #4ade80; background: rgba(74,222,128,.06); }
+  .log-SELL { border-color: #4ade80; background: rgba(74,222,128,.08); }
+  .log-LOSS { border-color: #f87171; background: rgba(248,113,113,.08); }
+  .log-AI { border-color: #a78bfa; background: rgba(167,139,250,.06); }
+  .log-NEWS { border-color: #60a5fa; background: rgba(96,165,250,.06); }
+  .log-ASK { border-color: #fbbf24; background: rgba(251,191,36,.08); }
+  .log-FILTER { border-color: #f87171; }
+  .log-PRE { border-color: #22d3ee; }
+  .log-SKIP { border-color: #6b7280; }
+  .log-WARN { border-color: #fb923c; }
+  .log-ERROR { border-color: #ef4444; }
+  .log-INFO { border-color: #6b7280; }
+  .log-HOLD { border-color: #4ade80; }
+  .log-TG { border-color: #a78bfa; }
+  .log-time { color: #5b6579; margin-right: 6px; }
+  .log-level { font-weight: 700; margin-right: 6px; font-size: 9px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px;
+           font-size: 10px; font-weight: 700; }
+  .badge-BUY { background: #064e3b; color: #4ade80; }
+  .badge-SKIP { background: #4c1d1d; color: #f87171; }
+  .empty { color: #5b6579; font-size: 12px; text-align: center; padding: 20px; }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+           background: #4ade80; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .btn-row { display: flex; gap: 8px; }
+  .btn { padding: 6px 14px; border-radius: 6px; border: none;
+         cursor: pointer; font-size: 12px; font-weight: 600; }
+  .btn-hold { background: #4ade80; color: #052e16; }
+  .btn-sell { background: #f87171; color: #450a0a; }
+  .btn-reset { background: #2a3654; color: #e6edf3; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+               font-size: 11px; color: #8892a6; }
+  .stat-grid div { padding: 6px 8px; background: #0f1526; border-radius: 6px; }
+  .stat-grid strong { color: #e6edf3; font-size: 14px; display: block; margin-top: 2px; }
+
+  /* ==== POSITION CARD v2 ==== */
+  .pos-card {
+    background: #0f1526; border-radius: 10px; margin-bottom: 10px;
+    padding: 12px; border-left: 4px solid #4ade80; position: relative;
+  }
+  .pos-card.loss { border-left-color: #f87171; }
+  .pos-head { display: flex; justify-content: space-between; align-items: center;
+              margin-bottom: 8px; gap: 10px; flex-wrap: wrap; }
+  .pos-symbol { font-size: 16px; font-weight: 800; color: #e6edf3; }
+  .pos-pnl-wrap { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .pos-pnl { font-size: 18px; font-weight: 800; font-family: monospace; }
+  .pos-pnl.green { color: #4ade80; } .pos-pnl.red { color: #f87171; }
+  .close-main {
+    background: #ef4444; color: #fff; border: none; padding: 8px 14px;
+    border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer;
+    white-space: nowrap;
+  }
+  .close-main:hover { background: #dc2626; }
+  .pos-detail { font-size: 11px; color: #8892a6; line-height: 1.6; }
+  .pos-detail strong { color: #cbd5e1; }
+  .pos-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .pos-actions button {
+    flex: 1; min-width: 70px; padding: 6px 8px; border: none; cursor: pointer;
+    border-radius: 5px; font-size: 11px; font-weight: 700;
+  }
+  .pct-25 { background: #f59e0b; color: #000; }
+  .pct-50 { background: #fb923c; color: #000; }
+  .pct-100 { background: #ef4444; color: #fff; }
+  .milestone-badge {
+    display: inline-block; padding: 2px 6px; background: #1e293b;
+    color: #fbbf24; border-radius: 4px; font-size: 10px; font-weight: 700;
+    margin-left: 4px;
+  }
+
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <span class="pulse"></span>Meme Bot
+    <span id="profile">—</span>
+    <span class="version">v2</span>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Ví USDC</div>
+      <div class="stat-value" id="wallet">$0</div></div>
+    <div class="stat"><div class="stat-label">Tổng</div>
+      <div class="stat-value" id="total">$0</div></div>
+    <div class="stat"><div class="stat-label">PnL</div>
+      <div class="stat-value" id="pnl">$0</div></div>
+    <div class="stat"><div class="stat-label">Vị thế</div>
+      <div class="stat-value" id="open">0</div></div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="col">
+    <div class="card">
+      <h3>📊 Hiệu suất tối ưu</h3>
+      <div class="stat-grid" id="stats-grid"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-reset" onclick="resetBot()">Reset ví</button>
+        <button class="btn btn-reset" onclick="forceReload()">Reload UI</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📜 Log</h3>
+      <div class="scroll" id="logs"></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card" id="decisions-card" style="display:none">
+      <h3>❓ Cần quyết định</h3>
+      <div id="decisions"></div>
+    </div>
+    <div class="card">
+      <h3>🔎 Token theo dõi <span id="cand-count"></span></h3>
+      <div class="scroll" id="candidates" style="max-height:300px"></div>
+    </div>
+    <div class="card">
+      <h3>💼 Vị thế mở <span id="pos-count"></span></h3>
+      <div class="scroll" id="positions" style="max-height:600px"></div>
+    </div>
+    <div class="card">
+      <h3>📊 Giao dịch</h3>
+      <div class="scroll" id="trades" style="max-height:250px"></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <h3>📰 News feed <span id="news-count"></span></h3>
+      <div class="scroll" id="news" style="max-height:720px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let state = null;
+
+async function loadState() {
+  try {
+    const r = await fetch('/api/state');
+    state = await r.json();
+    render();
+  } catch (e) { console.error(e); }
+}
+
+function fmtUsd(v) { return '$' + (v||0).toFixed(2); }
+function fmtPct(v) { return (v>=0?'+':'') + (v||0).toFixed(1) + '%'; }
+function cls(v) { return v >= 0 ? 'green' : 'red'; }
+function esc(s) { return String(s||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+function render() {
+  if (!state) return;
+
+  document.getElementById('wallet').textContent = fmtUsd(state.wallet_usdc);
+  document.getElementById('total').textContent  = fmtUsd(state.total_value);
+  const pnlEl = document.getElementById('pnl');
+  pnlEl.textContent = fmtUsd(state.total_pnl);
+  pnlEl.className = 'stat-value ' + cls(state.total_pnl);
+  document.getElementById('open').textContent = state.positions.length;
+  document.getElementById('profile').textContent = '[' + (state.profile||'?') + ']';
+
+  const maxPos = (state.settings && state.settings.max_positions) || 5;
+  document.getElementById('pos-count').textContent = state.positions.length + '/' + maxPos;
+
+  // Stats
+  const s = state.stats || {};
+  document.getElementById('stats-grid').innerHTML = `
+    <div>Tokens detected<strong>${s.tokens_detected||0}</strong></div>
+    <div>Bị lọc rác<strong>${s.tokens_filtered||0}</strong></div>
+    <div>Pre-score skip<strong>${s.tokens_pre_skip||0}</strong></div>
+    <div>Gemini calls<strong>${s.gemini_calls||0}</strong></div>
+    <div>Cache hits<strong>${s.gemini_cache_hits||0}</strong></div>
+    <div>Giao dịch<strong>${s.trades_executed||0}</strong></div>
+  `;
+
+  // Logs
+  document.getElementById('logs').innerHTML = state.logs.map(l => {
+    const lvl = (l.level || '').replace(/[?]/g, '');
+    return `
+      <div class="log-line log-${lvl}">
+        <span class="log-time">${l.time}</span>
+        <span class="log-level">${l.level}</span>${l.message}
+      </div>`;
+  }).join('') || '<div class="empty">Chưa có log</div>';
+
+  // Decisions
+  const dc = document.getElementById('decisions-card');
+  const dd = document.getElementById('decisions');
+  if (state.pending_decisions.length) {
+    dc.style.display = 'block';
+    dd.innerHTML = state.pending_decisions.map(d => `
+      <div style="background:linear-gradient(135deg,#1e293b,#2a1f3d);
+                  border:1px solid #fbbf24;border-radius:10px;
+                  padding:12px;margin-bottom:10px">
+        <h4 style="color:#fbbf24;margin-bottom:6px;font-size:14px">
+          ${esc(d.symbol)} — ${fmtPct(d.pnl_pct)} (mốc +${d.milestone||0}%)
+        </h4>
+        <p style="font-size:12px;color:#cbd5e1;margin-bottom:8px">
+          ${d.entry_price.toFixed(6)} → ${d.current_price.toFixed(6)}<br>
+          <em>${esc(d.reasoning)}</em>
+        </p>
+        <div class="btn-row">
+          <button class="btn btn-hold" onclick="decide('${d.id}','hold')">💎 Giữ</button>
+          <button class="btn btn-sell" onclick="decide('${d.id}','sell')">💰 Chốt</button>
+        </div>
+      </div>`).join('');
+  } else { dc.style.display = 'none'; }
+
+  // Candidates
+  document.getElementById('cand-count').textContent = state.candidate_tokens.length + ' token';
+  document.getElementById('candidates').innerHTML = state.candidate_tokens.length
+    ? state.candidate_tokens.map(c => {
+        const a = c.analysis;
+        const sh = c.shill || {};
+        const f = c.filter || {};
+        const m = f.metrics || {};
+        return `
+          <div style="background:#0f1526;padding:10px;border-radius:8px;
+                      margin-bottom:8px;border-left:3px solid
+                      ${sh.score >= 30 ? '#fbbf24' : '#2a3654'}">
+            <div style="display:flex;justify-content:space-between">
+              <strong>${esc(c.symbol)}</strong>
+              <span style="font-size:10px;color:#8892a6">${esc(c.source)}</span>
+            </div>
+            <div style="font-size:11px;color:#8892a6;margin-top:4px">
+              Liq: $${(m.liquidity||0).toLocaleString()} |
+              Vol: $${(m.volume_24h||0).toLocaleString()}<br>
+              Risk: ${f.score} | Shill: ${sh.score||0} | Pre: ${c.pre_score||'—'}
+            </div>
+            ${a ? `<div style="margin-top:6px;padding:6px;background:#0a0e1a;
+                  border-radius:4px;font-size:11px">
+              <span class="badge badge-${a.decision}">${a.decision}</span>
+              <span style="color:#a78bfa;margin-left:6px">${a.potential}</span>
+              <div style="color:#cbd5e1;margin-top:4px">${esc(a.reasoning)}</div>
+            </div>` : ''}
+          </div>`;
+      }).join('')
+    : '<div class="empty">Chưa phát hiện token nào</div>';
+
+  // ============================
+  // POSITIONS — v2 layout với nút ngay cạnh PnL
+  // ============================
+  document.getElementById('positions').innerHTML = state.positions.length
+    ? state.positions.map(p => {
+        const isGain = (p.pnl_pct || 0) >= 0;
+        const pnlClass = isGain ? 'green' : 'red';
+        const milestone = p.last_alert_milestone || 0;
+        const symbol = esc(p.symbol);
+        const addr = p.token_address;
+        const mode = esc(p.mode || 'PAPER');
+        const potential = esc(p.potential || 'x1.5');
+        return `
+          <div class="pos-card ${isGain?'':'loss'}">
+            <!-- DÒNG 1: SYMBOL + PNL + NÚT ĐÓNG -->
+            <div class="pos-head">
+              <div class="pos-symbol">${symbol}</div>
+              <div class="pos-pnl-wrap">
+                <div class="pos-pnl ${pnlClass}">${fmtPct(p.pnl_pct)}</div>
+                <button class="close-main"
+                        onclick="quickClose('${addr}')"
+                        title="Đóng toàn bộ vị thế ngay">
+                  🚪 ĐÓNG NGAY
+                </button>
+              </div>
+            </div>
+
+            <!-- DÒNG 2: Chi tiết -->
+            <div class="pos-detail">
+              Entry <strong>${p.entry_price.toFixed(6)}</strong>
+              → Now <strong>${p.current_price.toFixed(6)}</strong><br>
+              Giá trị: <strong>${fmtUsd(p.current_value)}</strong>
+              | PnL: <strong class="${pnlClass}">${fmtUsd(p.pnl_usd)}</strong><br>
+              ${mode} | ${potential}
+              ${milestone > 0 ? `<span class="milestone-badge">Mốc +${milestone}%</span>` : ''}
+              ${p.awaiting_user ? '<span class="yellow">⏳ chờ quyết định</span>' : ''}
+            </div>
+
+            <!-- DÒNG 3: Đóng từng phần -->
+            <div class="pos-actions">
+              <button class="pct-25"  onclick="closePosition('${addr}', 25)">Đóng 25%</button>
+              <button class="pct-50"  onclick="closePosition('${addr}', 50)">Đóng 50%</button>
+              <button class="pct-100" onclick="closePosition('${addr}', 100)">Đóng 100%</button>
+            </div>
+          </div>`;
+      }).join('')
+    : '<div class="empty">Chưa có vị thế</div>';
+
+  // Trades
+  document.getElementById('trades').innerHTML = state.trades.length
+    ? state.trades.map(t => `
+      <div style="font-size:11px;padding:6px;background:#0f1526;
+                  border-radius:6px;margin-bottom:4px;
+                  border-left:2px solid ${t.type==='BUY'?'#60a5fa':'#4ade80'}">
+        <span style="color:#5b6579">${t.time}</span>
+        <strong style="margin:0 6px">${t.type}</strong>
+        ${esc(t.symbol)} @ ${t.price.toFixed(6)}
+        ${t.pnl !== undefined ? `<span class="${cls(t.pnl)}" style="float:right">
+          ${fmtUsd(t.pnl)} (${fmtPct(t.pnl_pct)})</span>` : ''}
+      </div>`).join('')
+    : '<div class="empty">Chưa có giao dịch</div>';
+
+  // News
+  document.getElementById('news-count').textContent = state.news_feed.length + ' tin';
+  document.getElementById('news').innerHTML = state.news_feed.length
+    ? state.news_feed.map(n => {
+        const a = n.analysis;
+        return `
+          <div style="padding:10px;border-radius:8px;background:#0f1526;
+                      margin-bottom:8px;border-left:3px solid #60a5fa;font-size:12px">
+            <div style="display:flex;justify-content:space-between;
+                        font-size:10px;color:#8892a6;margin-bottom:4px">
+              <span>${n.time} • ${esc(n.source)}</span>
+              <span>${esc(n.kol||'')}</span>
+            </div>
+            <div style="color:#cbd5e1">${esc(n.text)}</div>
+            ${a ? `<div style="margin-top:6px;padding:6px;background:#0a0e1a;
+                    border-radius:4px;font-size:11px;border-left:2px solid #a78bfa">
+              <span class="badge badge-${a.decision}">${a.decision}</span>
+              <span style="margin-left:6px;color:#a78bfa">${a.potential} • ${a.score}</span>
+              <div style="margin-top:4px;color:#cbd5e1">${esc(a.reasoning)}</div>
+            </div>` : ''}
+          </div>`;
+      }).join('')
+    : '<div class="empty">Đang chờ tin...</div>';
+}
+
+// Nút "ĐÓNG NGAY" — đóng toàn bộ, có xác nhận
+async function quickClose(tokenAddress) {
+  if (!confirm('🚪 ĐÓNG TOÀN BỘ vị thế này?\n\nKhông thể hoàn tác.')) return;
+  await doClose(tokenAddress, 100);
+}
+
+// Nút đóng từng phần (25/50/100)
+async function closePosition(tokenAddress, percentage) {
+  const label = percentage >= 100 ? 'TOÀN BỘ' : `${percentage}%`;
+  if (!confirm(`Đóng ${label} vị thế này?`)) return;
+  await doClose(tokenAddress, percentage);
+}
+
+async function doClose(tokenAddress, percentage) {
+  try {
+    const r = await fetch(
+      `/api/position/${tokenAddress}/close?percentage=${percentage}`,
+      { method: 'POST' }
+    );
+    const data = await r.json();
+    if (!data.ok) {
+      alert('❌ Lỗi: ' + (data.error || 'Không rõ'));
+    } else {
+      console.log('✅', data.message, 'PnL:', data.pnl, data.pnl_pct);
+    }
+  } catch (e) {
+    alert('❌ Lỗi kết nối: ' + e.message);
+  }
+  await loadState();
+}
+
+async function decide(id, action) {
+  await fetch(`/api/decision/${id}/${action}`, {method:'POST'});
+  await loadState();
+}
+
+async function resetBot() {
+  if (!confirm('Reset ví?')) return;
+  await fetch('/api/reset', {method:'POST'});
+  await loadState();
+}
+
+function forceReload() {
+  location.reload(true);
+}
+
+loadState();
+setInterval(loadState, 3000);
+</script>
+</body>
+</html>
